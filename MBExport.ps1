@@ -3,7 +3,7 @@
 $ver = 1.0.2
 
 # Init
-$server = "HNS-P1"
+$server = "SEERVER01"
 $share = "Exports"
 
 $ScriptStart = (Get-Date)
@@ -74,4 +74,4 @@ echo "Elapsed Time: $elapsedTime"
 # ----- SEND LOG EMAIL ----- #
 
 $PSEmailServer = "localhost"
-Send-MailMessage -From "Syslog@hostnserve.com.au" -To "Syslog@hostnserve.com.au" -Subject "Mailbox Export Successful" -Body "Mailbox export job completed successfully.`n`nProcessed $Processed mailboxes.`n`nElapsed Time: $elapsedTime`n`nMailbox export request removal passes: $i`n`nExchange Mailbox Exporter Version $ver"
+Send-MailMessage -From "Someone@domain.com" -To "Someone@domain.com" -Subject "Mailbox Export Successful" -Body "Mailbox export job completed successfully.`n`nProcessed $Processed mailboxes.`n`nElapsed Time: $elapsedTime`n`nMailbox export request removal passes: $i`n`nExchange Mailbox Exporter Version $ver"
