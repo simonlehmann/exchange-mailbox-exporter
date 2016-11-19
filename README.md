@@ -13,5 +13,3 @@ Exchange Mailbox Exporter as Scheduled Task
 
 [comment]: <> (1. Download `MBExport.ps1` and save it in a save place on the C: drive of your machine.) 
 [comment]: <> (2. Open Scheduled Tasks)
-
-testing
