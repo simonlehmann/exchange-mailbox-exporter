@@ -1,8 +1,8 @@
 #  Mailbox Export
-#  Version 1.0.2
+#  Version 1.1.0
 #
 # Run bulk mailbox exports as a scheduled task.
-# Copyright (C) 2015 Simon Lehmann
+# Copyright (C) 2016 Simon Lehmann
 # 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,43 +19,70 @@
 #
 
 # Script version
-$ver = 1.0.2
+$ver = 1.1.0
 
-# Init
-$server = "SEERVER01"
-$share = "Exports"
+# Destination share (format: \\MACHINENAME\Path\To\Share)
+$serverShare = "\\SERVER\Export"
 
-$ScriptStart = (Get-Date)
+$scriptStart = (Get-Date)
 
 # Get today's date
-$date = Get-Date -format yyyy-MM-dd_hh-mm-ss
+$dirDate = Get-Date -format yyyy-MM-dd_hh-mm-ss
 
-echo $date
+echo $dirDate
 
 # Add Exchange PowerShell module
 Add-PSSnapin Microsoft.Exchange.Management.PowerShell.SnapIn;
 
+
+function DeleteRequests($requests)
+{
+    if ($requests.count -gt 0) 
+    {
+
+        echo ì$($requests.Count) requests to removeî
+        foreach ($request in $requests) {
+            Remove-MailboxExportRequest -Identity:$request -Confirm:$False
+        }
+        echo "Complete..."
+    }
+    else 
+    {
+        echo "No requests to remove"
+    }
+}
+
+
+# ----- MAILBOX EXPORT REQUEST CLEANUP ----- #
+$existingRequests = Get-MailboxExportRequest -Status Completed
+
+DeleteRequests($existingRequests)
+
+
 # ----- MAILBOX EXPORT REQUEST CREATION ----- #
 
 # Create dated folder
-New-Item \\$server\$share\$date -type directory
+New-Item $serverShare\$dirDate -type directory
 
-# Save all mailboxes to a variable (in my case it‚Äôs AllMailboxes):
-$AllMailboxes = Get-Mailbox
+# Get all mailboxes
+$mailboxes = Get-Mailbox
 
-# Export all mailboxes to PST files with names based on mailbox aliases (to use a different mailbox property replace the phrase ‚ÄúAlias‚Äù with its name):
-$AllMailboxes|%{$_|New-MailboxExportRequest -FilePath \\$server\$share\$date\$($_.Alias).pst}
+# Export all mailboxes to PST files with names based on mailbox aliases (to use a different mailbox property replace the phrase ìAliasî with its name):
+$mailboxes|%{$_|New-MailboxExportRequest -FilePath $serverShare\$dirDate\$($_.Alias).pst}
+
+
 
 # ----- MAILBOX EXPORT REQUEST REMOVAL ----- #
 
 $allCompleted = $false
 
 #echo $result
-$i = 0
-while($i -ne 60)
+$pass = 0
+$completed = 0
+while($pass -ne 360)
     {
-        $i++
-        echo "Mailbox Removal Pass $i"
+        $pass++
+        echo "Mailbox Removal Pass $pass"
         if ($allCompleted -eq $false) {
             $allCompleted = $true
             
@@ -66,6 +93,7 @@ while($i -ne 60)
                 if ($result.Status -eq "Completed") {
                     # Remove current mailbox export request
                     Remove-MailboxExportRequest -Identity:$result -Confirm:$False
+                    $completed++
                 }
 
                 else {
@@ -73,6 +101,7 @@ while($i -ne 60)
                     $allCompleted = $false
                 }
             }
+            echo "$completed of $($mailboxes.count) requests completed and removed..."
         }
         else {
             echo "about to break"
@@ -84,13 +113,13 @@ while($i -ne 60)
     }
 echo "Broken"
 
-$processed = $AllMailboxes.Count
+$processed = $mailboxes.Count
 
-$ScriptEnd = (Get-Date)
-$RunTime = New-Timespan -Start $ScriptStart -End $ScriptEnd
-$elapsedTime = ‚Äú{0}:{1}:{2}‚Äù -f $RunTime.Hours,$Runtime.Minutes,$RunTime.Seconds
+$scriptEnd = (Get-Date)
+$runTime = New-Timespan -Start $scriptStart -End $scriptEnd
+$elapsedTime = ì{0}:{1}:{2}î -f $runTime.Hours,$runtime.Minutes,$runTime.Seconds
 echo "Elapsed Time: $elapsedTime"
 # ----- SEND LOG EMAIL ----- #
 
 $PSEmailServer = "localhost"
-Send-MailMessage -From "Someone@domain.com" -To "Someone@domain.com" -Subject "Mailbox Export Successful" -Body "Mailbox export job completed successfully.`n`nProcessed $Processed mailboxes.`n`nElapsed Time: $elapsedTime`n`nMailbox export request removal passes: $i`n`nExchange Mailbox Exporter Version $ver"
+Send-MailMessage -From "someone@domain.com" -To "someone@domain.com" -Subject "Mailbox Export Successful" -Body "Mailbox export job completed successfully.`n`nProcessed $processed mailboxes.`n`nElapsed Time: $elapsedTime`n`nMailbox export request removal passes: $pass`n`nExchange Mailbox Exporter Version $ver"
